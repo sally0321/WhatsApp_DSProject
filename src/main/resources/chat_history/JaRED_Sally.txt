@@ -1,6 +1,0 @@
-[Sally]: Hi Jared
-[Jared]: Hi Sally
-[Sally]: Bye
-[Jared]: bye
-[Sally]: aloha
-[Jared]: byebye
