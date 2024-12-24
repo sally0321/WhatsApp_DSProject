@@ -1,0 +1,4 @@
+[Yw]: Hi Kim, have u eaten
+[Kim]: no im hungry
+[Yw]: bye kim
+[Kim]: bye
