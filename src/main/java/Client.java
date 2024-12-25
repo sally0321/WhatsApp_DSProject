@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 public class Client {
     private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 1234;
+    private static final int SERVER_PORT = 1110;
     private static Scanner scanner = new Scanner(System.in);
     private static String input;
     private static String username;

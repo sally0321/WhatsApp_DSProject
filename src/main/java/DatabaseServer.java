@@ -3,7 +3,7 @@ import java.io.*;
 public class DatabaseServer {
 
     // Constants for directory paths
-    private static final String CMD_DIRECTORY = "../../src/main/resources/chat_history/";
+    private static final String CMD_DIRECTORY = "../resources/chat_history/";
     private static final String MVN_DIRECTORY = "src/main/resources/chat_history/";
     private static final String DIRECTORY = CMD_DIRECTORY; // Change as needed
 

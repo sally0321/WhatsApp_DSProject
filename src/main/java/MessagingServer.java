@@ -2,10 +2,14 @@
 import java.io.*;
 import java.net.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 
 public class MessagingServer {
-    private static final int PORT = 1234;
+    private static final int PORT = 1110;
     private static CopyOnWriteArrayList<ClientHandler> clients = new CopyOnWriteArrayList<>();
+    private static final SimpleDateFormat timeFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+    private static Timestamp timestamp = null;
 
     public static void main(String[] args) {
         try {
@@ -29,14 +33,42 @@ public class MessagingServer {
 
     // Send message to the intended recipient
     public static void sendMessage(String message, ClientHandler sender, String recipient) {
-        for (ClientHandler client : clients) {
-            if (client != sender && sender.getUsername().equals(client.getRecipient())) {
-                client.out.println(message);
-                break;
-            }
+        timestamp = new Timestamp(System.currentTimeMillis());
+        String time = timeFormat.format(timestamp);
+
+        String lastUser = getLastUser(sender.getUsername(), recipient);
+
+        // add space between messages sent by different users for easier reading
+        if (lastUser.equals(sender.getUsername())) {
+            message = "[" + time + "]\n" + message;
+        } else{
+            message = "\n[" + time + "]\n" + message;
         }
+
         // Save the message to the file for this conversation
         DatabaseServer.saveMessage(sender.getUsername(), recipient, message);
+        String chat = DatabaseServer.getChatHistory(sender.getUsername(), recipient);
+
+        for (ClientHandler client : clients) {
+            if (client != sender && sender.getUsername().equals(client.getRecipient())) {
+                // print whole chat on recipient side
+                client.out.println(chat);
+                client.out.println("Type your message: ");
+            }
+
+            // print whole chat on sender side
+            sender.out.println(chat);
+            sender.out.println("Type your message: ");
+        }
+
+    }
+
+    // Get the user who sent last message
+    public static String getLastUser(String sender, String recipient){
+        String chat = DatabaseServer.getChatHistory(sender, recipient);
+        String[] lines = chat.split("\n");
+        String[] lastMessage = lines[lines.length - 1].split("[\\[\\]]");
+        return lastMessage[1];
     }
 
     // Internal class to handle client connections
