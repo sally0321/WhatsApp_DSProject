@@ -219,6 +219,7 @@ public class Client {
 
 
             while (true) {
+                // Show menu only if not awaiting response or in a call
                 if (!awaitingResponse.get() && !inCall.get()) {
                     System.out.println("\nMenu:");
                     System.out.println("1 - Make a Video Call");
@@ -228,32 +229,35 @@ public class Client {
                 String input = scanner.nextLine();
 
                 if (awaitingResponse.get()) {
+                    // Handle call response (Y = accept, N = reject)
                     if (input.equals("Y") || input.equals("N")) {
                         out.println(input);
                         awaitingResponse.set(false);
+                        inCall.set(true);
                     } else {
                         System.out.println("Invalid input. Press Y to accept or N to reject.");
                     }
+
                 } else if (inCall.get()) {
-                    if (input.equals("0")) {
+                    if (input.equals("0") ) {
+                        // Send the end call signal to the server
                         out.println("0");
+                        System.out.println("You ended the call.");
                         inCall.set(false);
                     } else {
                         System.out.println("Invalid input. Press 0 to end the call.");
                     }
-                } else {
-                    if (input.equals("1")) {
-                        System.out.println("Enter the username to call:");
-                        String targetUser = scanner.nextLine();
-                        out.println("CALL " + targetUser);
-                        awaitingResponse.set(true);
-                        System.out.println("Waiting for response....");
-                    } else if (input.equals("2")) {
-                        out.println("exit");
-                        break;
-                    } else {
-                        System.out.println("Invalid input. Please try again.");
-                    }
+                }     // Handle menu options when idle
+                else if (input.equals("1")) { // Make a call
+                    System.out.println("Enter the username to call:");
+                    String targetUser = scanner.nextLine();
+                    out.println("CALL " + targetUser); // Notify the server about the call
+                    awaitingResponse.set(true);
+                } else if (input.equals("2")) { // Quit option
+                    out.println("exit"); // Notify the server
+                    break; // Exit the loop
+                } else { // Invalid menu input
+                    System.out.println("Invalid input. Please try again.");
                 }
             }
         } catch (IOException e) {
