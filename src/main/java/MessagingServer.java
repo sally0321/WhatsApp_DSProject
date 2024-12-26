@@ -1,6 +1,7 @@
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -35,8 +36,8 @@ public class MessagingServer {
     public static void sendMessage(String message, ClientHandler sender, String recipient) {
         timestamp = new Timestamp(System.currentTimeMillis());
         String time = timeFormat.format(timestamp);
-
         String lastUser = getLastUser(sender.getUsername(), recipient);
+        int messageCount = 0;
 
         // add space between messages sent by different users for easier reading
         if (lastUser.equals(sender.getUsername())) {
@@ -60,8 +61,12 @@ public class MessagingServer {
             sender.out.println(chat);
             sender.out.println("Type your message: ");
         }
+    }
+
+    public static void addContact(String contacts, String username) {
 
     }
+
 
     // Get the user who sent last message
     public static String getLastUser(String sender, String recipient){
@@ -92,6 +97,94 @@ public class MessagingServer {
             }
         }
 
+
+        // Releases resources associated with the client connection.
+        private void cleanupResources(){
+            try {
+                if (in != null) in.close();
+                if (out != null) out.close();
+                if (clientSocket != null) clientSocket.close();
+                System.out.println("Connection with " + username + " closed.");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        private void promptAddContact() throws IOException {
+            try {
+                ArrayList<String> users = DatabaseServer.getUsers();
+
+                out.println("Enter user to add (Enter 0 to cancel):");
+
+                String input;
+
+                while ((input = in.readLine()) != null) {
+                    if (users.contains(input)) {
+                        DatabaseServer.saveContact(username, input + "\n");
+                        out.println("User added to contacts.\n");
+                        break;
+                    }
+                    else if(input.equals("0")) {
+                        if (DatabaseServer.getContacts(username).isEmpty()){
+                            out.println("\nContact list empty, please add a new contact.\n");
+                            promptAddContact();
+                        }
+                        break;
+                    }
+                    else {
+                        out.println("User does not exist.\n");
+                        promptAddContact();
+                    }
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        private void showContactList() {
+            ArrayList<String> contacts = (DatabaseServer.getContacts(username));
+            out.println(username + "'s contact list:");
+
+            for (String contact : contacts) {
+                out.println(contact);
+            }
+
+            out.println();
+        }
+
+
+        private String promptRecipient() throws IOException {
+            try {
+                out.println("Enter the person you want to chat with (Enter 1 to add new contact):");
+                String input;
+
+                while ((input = in.readLine()) != null) {
+                    if (input.equals("1")) {
+                        promptAddContact();
+                        showContactList();
+                    }
+                    else{
+                        recipient = input.trim();
+                    }
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            return recipient;
+        }
+
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getRecipient() {
+            return recipient;
+        }
+
         @Override
         public void run() {
             try {
@@ -99,12 +192,26 @@ public class MessagingServer {
                 username = in.readLine();
                 System.out.println("User " + username + " connected.");
 
-                out.println("Welcome to the chat, " + username + "!");
+                ArrayList<String> contacts = (DatabaseServer.getContacts(username));
+
+                if (contacts.isEmpty()) {
+                    out.println("No contacts found.");
+                    promptAddContact();
+                }
+
+                showContactList();
 
                 recipient = promptRecipient();
+
+                while (!contacts.contains(recipient)) {
+                    out.println("Please enter a valid contact.\n");
+                    recipient = promptRecipient();
+                }
+
+                out.println();
                 out.println(DatabaseServer.getChatHistory(username, recipient));
 
-                out.println("Type your message: ");
+                out.println("Type your message (Type exit to exit chat): ");
 
                 String inputLine;
                 while ((inputLine = in.readLine()) != null) {
@@ -124,31 +231,6 @@ public class MessagingServer {
             } finally {
                 cleanupResources();
             }
-        }
-
-        // Releases resources associated with the client connection.
-        private void cleanupResources(){
-            try {
-                if (in != null) in.close();
-                if (out != null) out.close();
-                if (clientSocket != null) clientSocket.close();
-                System.out.println("Connection with " + username + " closed.");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        private String promptRecipient() throws IOException {
-            out.println("Enter recipient name:");
-            return in.readLine();
-        }
-
-        public String getUsername() {
-            return username;
-        }
-
-        public String getRecipient() {
-            return recipient;
         }
     }
 }
