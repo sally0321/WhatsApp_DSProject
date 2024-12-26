@@ -216,7 +216,7 @@ public class Client {
                         }
                     }
                 } catch (IOException e) {
-                    System.out.println("Exiting...");
+                    System.out.println(" ");
                 }
             }).start();
 

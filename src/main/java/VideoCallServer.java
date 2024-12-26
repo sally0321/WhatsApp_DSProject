@@ -17,7 +17,7 @@ public class VideoCallServer {
                 new Thread(clientHandler).start();
             }
         } catch (IOException e) {
-            System.out.println("Exiting...");
+            System.out.println(" ");
         }
     }
 
