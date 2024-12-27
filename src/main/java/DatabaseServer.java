@@ -1,5 +1,7 @@
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class DatabaseServer {
 
@@ -25,16 +27,37 @@ public class DatabaseServer {
 
     public static void saveContact(String user, String contact) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(CONTACT_DIRECTORY + user + ".txt", true))) {
-            writer.write(contact);
+            writer.write(contact + ",0");
+            writer.newLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(CONTACT_DIRECTORY + contact + ".txt", true))) {
+            writer.write(user + ",0");
             writer.newLine();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    public static void updateMessageStatus(String recipient, String sender, int messageCount){
+        Map<String,Integer> contacts = DatabaseServer.getContacts(recipient);
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(CONTACT_DIRECTORY + recipient + ".txt"))) {
+            contacts.put(sender, messageCount);
+            for (String contact : contacts.keySet()) {
+                writer.write(contact + "," + contacts.get(contact));
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     // Function to print the content of the chat history file
     public static String getChatHistory(String userA, String userB) {
+        System.out.println(userA + " " + userB);
+
         String fileName = getSortedFileName(userA, userB);
         String chat = "";
 
@@ -69,9 +92,9 @@ public class DatabaseServer {
         return chat;
     }
 
-    public static ArrayList<String> getContacts(String user) {
+    public static Map<String, Integer> getContacts(String user) {
         File file = new File(CONTACT_DIRECTORY + user + ".txt");
-        ArrayList<String> contacts = new ArrayList<>();
+        Map<String,Integer> contacts = new HashMap<String,Integer>();
 
         // Check if the file exists
         if (!file.exists()) {
@@ -87,7 +110,8 @@ public class DatabaseServer {
             String line;
 
             while ((line = reader.readLine()) != null) {
-                contacts.add(line);
+                String[] contactPair = line.split(",");
+                contacts.put(contactPair[0], Integer.parseInt(contactPair[1]));
             }
 
         } catch (IOException e) {
@@ -100,7 +124,7 @@ public class DatabaseServer {
         File file = new File(USER_FILE);
         ArrayList<String> users = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line = reader.readLine();
+            String line;
 
             while ((line = reader.readLine()) != null) {
                 users.add(line);
