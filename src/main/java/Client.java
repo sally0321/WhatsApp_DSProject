@@ -6,7 +6,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Client {
     private static final String SERVER_ADDRESS = "localhost";
     private static final int SERVER_PORT = 1110;
-    private static final int PROFILE_SERVER_PORT = 1111; 
+    private static final int PROFILE_SERVER_PORT = 1111;
+    private static final int VIDEO_CALL_SERVER_PORT = 1112;
 
     private static Scanner scanner = new Scanner(System.in);
     private static String input;
@@ -14,14 +15,14 @@ public class Client {
 
     public static void main(String[] args) {
         promptUsername();
-        while (true){
+        while (true) {
             promptInput();
-            if (input.equals("exit")){
+            if (input.equals("exit")) {
                 break;
             }
-            
-            switch (input){
-                case "1":{
+
+            switch (input) {
+                case "1": {
                     try {
                         Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
                         System.out.println("\nConnected to the chat server!");
@@ -51,7 +52,7 @@ public class Client {
                         while (true) {
                             userInput = scanner.nextLine();
                             out.println(userInput);
-                            if (userInput.equals("exit")){
+                            if (userInput.equals("exit")) {
                                 break;
                             }
                         }
@@ -59,10 +60,11 @@ public class Client {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+                    break;
                 }
-                case"2":{
-                	profileSettings();
-                	break; 
+                case "2": {
+                    profileSettings();
+                    break;
                 }
                 case "3": // Video calling functionality
                     startVideoCall();
@@ -87,7 +89,7 @@ public class Client {
         System.out.println("Enter your username:");
         username = scanner.nextLine();
     }
-    
+
     private static void profileSettings() {
         while (true) {
             System.out.println("\n-- Profile Settings --");
@@ -149,45 +151,51 @@ public class Client {
             e.printStackTrace();
         }
     }
+
     private static void startVideoCall() {
-        try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT)) {
-            System.out.println("Connected to the server!");
+        try (Socket socket = new Socket(SERVER_ADDRESS, VIDEO_CALL_SERVER_PORT)) {
+            System.out.println("Connected to the video call server!");
 
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
+            // Send the username directly without prompting again
+            out.println(username);
+
             AtomicBoolean awaitingResponse = new AtomicBoolean(false);
             AtomicBoolean inCall = new AtomicBoolean(false);
+            AtomicBoolean running = new AtomicBoolean(true);
 
+            // Thread to listen for server responses
             new Thread(() -> {
                 try {
                     String serverMessage;
-                    while ((serverMessage = in.readLine()) != null) {
+                    while (running.get() && (serverMessage = in.readLine()) != null) {
                         System.out.println(serverMessage);
 
                         // Handle "not online" message
                         if (serverMessage.contains("is not online")) {
-                            awaitingResponse.set(false); // Reset awaitingResponse state
-                            inCall.set(false); // Reset inCall state
+                            awaitingResponse.set(false);
+                            inCall.set(false);
                             System.out.println("Target user is not online, resetting states...");
-                            System.out.println("\nMenu:"); // Print menu after resetting states
+                            System.out.println("\nMenu:");
                             System.out.println("1 - Make a Video Call");
                             System.out.println("2 - Quit");
-                            continue; // Skip further processing
+                            continue;
                         }
 
-                        // Enterresponse mode when receiving a call
+                        // Handle incoming call notification
                         if (serverMessage.contains("is calling you")) {
                             awaitingResponse.set(true);
                         }
 
-                        // Enter call mode when the call is accepted
+                        // Handle call accepted
                         if (serverMessage.contains("Starting video call...")) {
                             awaitingResponse.set(false);
                             inCall.set(true);
                         }
 
-                        // Exit call mode when the call ends
+                        // Handle call ended
                         if (serverMessage.contains("Call ended by")) {
                             inCall.set(false);
                             awaitingResponse.set(false);
@@ -196,30 +204,24 @@ public class Client {
                             System.out.println("1 - Make a Video Call");
                             System.out.println("2 - Quit");
                         }
+
+                        // Handle call rejected
                         if (serverMessage.contains("rejected your call")) {
                             awaitingResponse.set(false);
                             inCall.set(false);
+                            System.out.println("\nCall rejected. Returning to menu.");
                             System.out.println("\nMenu:");
                             System.out.println("1 - Make a Video Call");
                             System.out.println("2 - Quit");
-                        }
-                        if (serverMessage.contains("You rejected the call from")) {
-                            awaitingResponse.set(false);
-                            inCall.set(false);
-                            System.out.println("\nMenu:");
-                            System.out.println("1 - Make a Video Call");
-                            System.out.println("2 - Quit");
-
                         }
                     }
                 } catch (IOException e) {
-                    System.out.println("Connection lost. Exiting...");
+                    System.out.println(" ");
                 }
             }).start();
 
-
-            while (true) {
-                // Show menu only if not awaiting response or in a call
+            // Handle user inputs
+            while (running.get()) {
                 if (!awaitingResponse.get() && !inCall.get()) {
                     System.out.println("\nMenu:");
                     System.out.println("1 - Make a Video Call");
@@ -229,34 +231,32 @@ public class Client {
                 String input = scanner.nextLine();
 
                 if (awaitingResponse.get()) {
-                    // Handle call response (Y = accept, N = reject)
+                    // Accept or reject the call
                     if (input.equals("Y") || input.equals("N")) {
                         out.println(input);
                         awaitingResponse.set(false);
-                        inCall.set(true);
                     } else {
                         System.out.println("Invalid input. Press Y to accept or N to reject.");
                     }
-
                 } else if (inCall.get()) {
-                    if (input.equals("0") ) {
-                        // Send the end call signal to the server
+                    if (input.equals("0")) {
                         out.println("0");
                         System.out.println("You ended the call.");
                         inCall.set(false);
                     } else {
                         System.out.println("Invalid input. Press 0 to end the call.");
                     }
-                }     // Handle menu options when idle
-                else if (input.equals("1")) { // Make a call
+                } else if (input.equals("1")) {
                     System.out.println("Enter the username to call:");
                     String targetUser = scanner.nextLine();
                     out.println("CALL " + targetUser); // Notify the server about the call
                     awaitingResponse.set(true);
-                } else if (input.equals("2")) { // Quit option
+                } else if (input.equals("2")) {
+                    System.out.println("Exiting...");
                     out.println("exit"); // Notify the server
-                    break; // Exit the loop
-                } else { // Invalid menu input
+                    running.set(false);
+                    break;
+                } else {
                     System.out.println("Invalid input. Please try again.");
                 }
             }

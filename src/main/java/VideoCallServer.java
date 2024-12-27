@@ -3,11 +3,11 @@ import java.net.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class VideoCallServer {
-    private static final int PORT = 1234;
+    private static final int VIDEO_CALL_SERVER_PORT = 1112;
     public static CopyOnWriteArrayList<ClientHandler> clients = new CopyOnWriteArrayList<>();
 
     public static void main(String[] args) {
-        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+        try (ServerSocket serverSocket = new ServerSocket(VIDEO_CALL_SERVER_PORT)) {
             System.out.println("Server is running and waiting for connections...");
 
             while (true) {
@@ -17,7 +17,7 @@ public class VideoCallServer {
                 new Thread(clientHandler).start();
             }
         } catch (IOException e) {
-            System.out.println("Exiting...");
+            System.out.println(" ");
         }
     }
 
@@ -46,7 +46,7 @@ public class VideoCallServer {
         @Override
         public void run() {
             try {
-                out.println("Enter your username:");
+                // The username is sent immediately after the connection is established
                 username = in.readLine();
                 System.out.println("User " + username + " connected.");
 
@@ -55,10 +55,10 @@ public class VideoCallServer {
                     if (inputLine.startsWith("CALL")) {
                         handleCallRequest(inputLine.split(" ")[1]);
                     } else if (inputLine.equalsIgnoreCase("Y") || inputLine.equalsIgnoreCase("N")) {
-                        handleCallResponse(inputLine); // Pass Y or N to handleCallResponse
+                        handleCallResponse(inputLine);
                     } else if (inputLine.equals("0")) {
-                        handleCallEnd(); // Handle call end
-                    }else if (inputLine.equals("exit")) {
+                        handleCallEnd();
+                    } else if (inputLine.equals("exit")) {
                         System.out.println("User " + username + " has exited.");
                         break;
                     }
