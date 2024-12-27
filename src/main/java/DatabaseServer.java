@@ -116,6 +116,8 @@ public class DatabaseServer {
 
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (ArrayIndexOutOfBoundsException e){
+            return contacts;
         }
         return contacts;
     }

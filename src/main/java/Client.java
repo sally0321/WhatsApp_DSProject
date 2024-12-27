@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
     private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 1110;
+    private static final int CHAT_SERVER_PORT = 1110;
     private static final int PROFILE_SERVER_PORT = 1111;
     private static final int VIDEO_CALL_SERVER_PORT = 1112;
 
@@ -55,7 +55,7 @@ public class Client {
 
     private static void startChatting(){
         try {
-            Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
+            Socket socket = new Socket(SERVER_ADDRESS, CHAT_SERVER_PORT);
             System.out.println("\nConnected to the chat server!");
 
             // Setting up input and output streams
@@ -84,13 +84,13 @@ public class Client {
             while (true) {
                 userInput = scanner.nextLine();
                 out.println(userInput);
-                if (userInput.equals("exit")) {
+                if (userInput.equals("back")) {
                     break;
                 }
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Unable to connect to server. Please try again later.");
         }
     }
 

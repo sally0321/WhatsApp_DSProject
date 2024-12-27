@@ -161,14 +161,16 @@ public class MessagingServer {
         private void promptRecipient() throws IOException {
             try {
                 while (true) {
-                    out.println("Enter the person you want to chat with (Enter 1 to add a new contact, exit to return to menu):");
+                    out.println("1 - Add new contact");
+                    out.println("Back - Return to Menu");
+                    out.println("Enter the person you want to chat with:");
                     String input = in.readLine();
 
                     if (input.equals("1")) {
                         promptAddContact();
                         showContactList();
-                    } else if (input.equalsIgnoreCase("exit")) {
-                        out.println("HeyO");
+                    } else if (input.equalsIgnoreCase("back")) {
+                        recipient = input;
                         break;
                     }
                     else if (!DatabaseServer.getContacts(username).containsKey(input)) {
@@ -232,27 +234,27 @@ public class MessagingServer {
 
                     promptRecipient();
 
-                    if (recipient.equalsIgnoreCase("exit")) {
+                    if (recipient.equalsIgnoreCase("back")) {
                         break;
                     }
 
-                    out.println();
+                    else {
+                        out.println();
+                        out.println("\n" + DatabaseServer.getChatHistory(username, recipient));
 
-                    out.println("\n" + DatabaseServer.getChatHistory(username, recipient));
-
-                    // Prompt client for message
-                    promptMessage();
-                    out.println("1");
+                        // Prompt client for message
+                        promptMessage();
+                    }
                 }
-                out.println("2.");
+
                 clients.remove(this);
                 System.out.println("User " + username + " has exited. Active clients: " + clients.size());
-
             } catch (IOException e) {
                 System.err.println("Error in communication with user " + username + ": " + e.getMessage());
             } finally {
                 cleanupResources();
             }
+
         }
     }
 }
