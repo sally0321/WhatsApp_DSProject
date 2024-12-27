@@ -57,14 +57,13 @@ public class MessagingServer {
                 // print whole chat on recipient side
                 newMessages.clear();
                 client.out.println(chat);
-                DatabaseServer.updateMessageStatus(recipient, sender.getUsername(), newMessages.size());
                 client.out.println("Type your message (Type exit to exit chat): ");
+                DatabaseServer.updateMessageStatus(recipient, sender.getUsername(), newMessages.size());
             }
 
             // print whole chat on sender side
             sender.out.println(chat);
             DatabaseServer.updateMessageStatus(recipient, sender.getUsername(), newMessages.size());
-            sender.out.println("Type your message (Type exit to exit chat): ");
         }
     }
 
@@ -75,8 +74,8 @@ public class MessagingServer {
         try {
             String[] lines = chat.split("\n");
             String[] lastMessage = lines[lines.length - 1].split("[\\[\\]]");
-
             return lastMessage[1];
+
         } catch (ArrayIndexOutOfBoundsException e) {
             return sender;
         }
@@ -159,21 +158,25 @@ public class MessagingServer {
             out.println();
         }
 
-        private String promptRecipient() throws IOException {
+        private void promptRecipient() throws IOException {
             try {
                 while (true) {
-                    out.println("Enter the person you want to chat with (Enter 1 to add a new contact):");
+                    out.println("Enter the person you want to chat with (Enter 1 to add a new contact, exit to return to menu):");
                     String input = in.readLine();
 
-                    if (input == null) {
-                        out.println("Please enter a valid contact.");
-                    } else if (input.equals("1")) {
+                    if (input.equals("1")) {
                         promptAddContact();
                         showContactList();
+                    } else if (input.equalsIgnoreCase("exit")) {
+                        out.println("HeyO");
+                        break;
+                    }
+                    else if (!DatabaseServer.getContacts(username).containsKey(input)) {
+                        out.println("Please enter a valid contact.");
                     } else {
                         recipient = input;
                         DatabaseServer.updateMessageStatus(username, recipient,0);
-                        return recipient;
+                        break;
                     }
                 }
             } catch (IOException e) {
@@ -190,6 +193,26 @@ public class MessagingServer {
             return recipient;
         }
 
+        public void promptMessage() throws IOException {
+            try {
+                String input;
+                ArrayList<String> newMessages = new ArrayList<>();
+
+                 while (true) {
+                    out.println("Type your message (Type exit to exit chat): ");
+                    // Send the message
+                    input = in.readLine();
+                    if (input.equalsIgnoreCase("exit")) {
+                        break;
+                    }
+                    sendMessage("[" + username + "]: " + input, this, recipient, newMessages);
+                 }
+
+            } catch (IOException e) {
+                System.err.println("Error in communication with user " + username + ": " + e.getMessage());
+            }
+        }
+
         @Override
         public void run() {
             try {
@@ -197,57 +220,39 @@ public class MessagingServer {
                 username = in.readLine();
                 System.out.println("User " + username + " connected.");
 
-                Map<String, Integer> contacts = (DatabaseServer.getContacts(username));
+                while (true) {
+                    Map<String, Integer> contacts = (DatabaseServer.getContacts(username));
 
-                if (contacts.isEmpty()) {
-                    out.println("No contacts found.");
-                    promptAddContact();
-                }
-
-                showContactList();
-
-                recipient = promptRecipient();
-
-                contacts = (DatabaseServer.getContacts(username));
-                while (!contacts.containsKey(recipient)) {
-                    out.println("Please enter a valid contact.\n");
-                    recipient = promptRecipient();
-
-                    contacts = (DatabaseServer.getContacts(username));
-                }
-
-                out.println();
-
-                out.println("\n" + DatabaseServer.getChatHistory(username, recipient));
-
-                // Prompt client for message
-                out.println("Type your message (Type exit to exit chat): ");
-
-                // Initialize array list of unread messages
-                ArrayList<String> unreadMessages = new ArrayList<>();
-
-                String inputLine;
-                while ((inputLine = in.readLine()) != null) {
-                    // System.out.println("[" + username + "]: " + inputLine);
-                    // System.out.println(clients);
-                    if (inputLine.equalsIgnoreCase("exit")) {
-                        // Remove the client handler from the list
-                        clients.remove(this);
-                        System.out.println("User " + username + " has exited. Active clients: " + clients.size());
-
-                        break;// Exit the loop
+                    if (contacts.isEmpty()) {
+                        out.println("No contacts found.");
+                        promptAddContact();
                     }
-                    // Send the message
 
-                    sendMessage("[" + username + "]: " + inputLine, this, recipient, unreadMessages);
+                    showContactList();
+
+                    promptRecipient();
+
+                    if (recipient.equalsIgnoreCase("exit")) {
+                        break;
+                    }
+
+                    out.println();
+
+                    out.println("\n" + DatabaseServer.getChatHistory(username, recipient));
+
+                    // Prompt client for message
+                    promptMessage();
+                    out.println("1");
                 }
+                out.println("2.");
+                clients.remove(this);
+                System.out.println("User " + username + " has exited. Active clients: " + clients.size());
+
             } catch (IOException e) {
                 System.err.println("Error in communication with user " + username + ": " + e.getMessage());
             } finally {
                 cleanupResources();
             }
         }
-
-
     }
 }
