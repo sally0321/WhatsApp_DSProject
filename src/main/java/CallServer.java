@@ -2,7 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class VideoCallServer {
+public class CallServer {
     private static final int VIDEO_CALL_SERVER_PORT = 1112;
     public static CopyOnWriteArrayList<ClientHandler> clients = new CopyOnWriteArrayList<>();
 
@@ -71,7 +71,7 @@ public class VideoCallServer {
         }
 
         private void handleCallRequest(String targetUser) {
-            for (ClientHandler client : VideoCallServer.clients) {
+            for (ClientHandler client : CallServer.clients) {
                 if (client.getUsername().equals(targetUser)) {
                     client.out.println("\n" + username + " is calling you.\nY = Receive\nN = Reject.\n");
                     client.inCall = this;
@@ -86,7 +86,7 @@ public class VideoCallServer {
         private void handleCallResponse(String input) {
             if (inCall != null) {
                 if (input.equalsIgnoreCase("Y")) { // Call accepted
-                    inCall.out.println("Call accepted by " + username + ". Starting video call... Press 0 to end.");
+                    inCall.out.println("Call accepted by " + username + ". Starting call... Press 0 to end.");
                     out.println("Call with " + inCall.getUsername() + " connected. Press 0 to end.");
                     inCall.inCall = this; // Set inCall for Client A
                     this.inCall = inCall; // Set inCall for Client B
@@ -105,13 +105,13 @@ public class VideoCallServer {
                 String caller = inCall.getUsername(); // The other client
                 String recipient = username;         // This client
 
-                // Notify the other client
+                // Notify both users
                 inCall.out.println("Call ended by " + recipient + ".");
                 inCall.inCall = null; // Clear inCall state for the other client
                 inCall = null; // Clear inCall state for this client
                 System.out.println("\nMenu:");
-                System.out.println("1 - Make a Video Call");
-                System.out.println("2 - Quit");
+                System.out.println("1 - Make a  Call");
+                System.out.println("back - Go Back");
                 System.out.println("Call End: Caller = " + caller + ", Ended by = " + recipient);
             }
         }
@@ -121,7 +121,7 @@ public class VideoCallServer {
                 if (in != null) in.close();
                 if (out != null) out.close();
                 if (clientSocket != null) clientSocket.close();
-                VideoCallServer.removeClient(this);
+                CallServer.removeClient(this);
             } catch (IOException e) {
                 System.out.println("Exiting...");
             }
