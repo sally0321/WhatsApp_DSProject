@@ -34,7 +34,7 @@ public class MessagingServer {
     }
 
     // Send message to the intended recipient
-    public static void sendMessage(String message, ClientHandler sender, String recipient, ArrayList<String> newMessages) {
+    public static void sendMessage(String message, ClientHandler sender, String recipient) {
         timestamp = new Timestamp(System.currentTimeMillis());
         String time = timeFormat.format(timestamp);
         String lastUser = getLastUser(sender.getUsername(), recipient);
@@ -46,7 +46,9 @@ public class MessagingServer {
             message = "\n[" + time + "]\n" + message;
         }
 
-        newMessages.add(message);
+        Integer newMessagesCount = DatabaseServer.getContacts(recipient).get(sender.getUsername());
+        newMessagesCount ++;
+        DatabaseServer.updateMessageStatus(recipient, sender.getUsername(), newMessagesCount);
 
         // Save the message to the file for this conversation
         DatabaseServer.saveMessage(sender.getUsername(), recipient, message);
@@ -55,15 +57,13 @@ public class MessagingServer {
         for (ClientHandler client : clients) {
             if (client != sender && sender.getUsername().equals(client.getRecipient())) {
                 // print whole chat on recipient side
-                newMessages.clear();
+                newMessagesCount = 0;
                 client.out.println(chat);
                 client.out.println("Type your message (Type exit to exit chat): ");
-                DatabaseServer.updateMessageStatus(recipient, sender.getUsername(), newMessages.size());
+                DatabaseServer.updateMessageStatus(recipient, sender.getUsername(), newMessagesCount);
             }
-
             // print whole chat on sender side
             sender.out.println(chat);
-            DatabaseServer.updateMessageStatus(recipient, sender.getUsername(), newMessages.size());
         }
     }
 
@@ -198,17 +198,16 @@ public class MessagingServer {
         public void promptMessage() throws IOException {
             try {
                 String input;
-                ArrayList<String> newMessages = new ArrayList<>();
 
-                 while (true) {
-                    out.println("Type your message (Type exit to exit chat): ");
-                    // Send the message
-                    input = in.readLine();
-                    if (input.equalsIgnoreCase("exit")) {
-                        break;
-                    }
-                    sendMessage("[" + username + "]: " + input, this, recipient, newMessages);
-                 }
+                while (true) {
+                out.println("Type your message (Type exit to exit chat): ");
+                // Send the message
+                input = in.readLine();
+                if (input.equalsIgnoreCase("exit")) {
+                    break;
+                }
+                sendMessage("[" + username + "]: " + input, this, recipient);
+                }
 
             } catch (IOException e) {
                 System.err.println("Error in communication with user " + username + ": " + e.getMessage());

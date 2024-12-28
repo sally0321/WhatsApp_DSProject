@@ -41,7 +41,7 @@ public class DatabaseServer {
         }
     }
 
-    public static void updateMessageStatus(String recipient, String sender, int messageCount){
+    public static void updateMessageStatus(String recipient, String sender, Integer messageCount){
         Map<String,Integer> contacts = DatabaseServer.getContacts(recipient);
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(CONTACT_DIRECTORY + recipient + ".txt"))) {
             contacts.put(sender, messageCount);
