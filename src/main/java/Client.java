@@ -158,7 +158,7 @@ public class Client {
 
     private static void startVideoCall() {
         try (Socket socket = new Socket(SERVER_ADDRESS, VIDEO_CALL_SERVER_PORT)) {
-            System.out.println("Connected to the video call server!");
+            System.out.println("Connected to the call server!");
 
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -183,8 +183,8 @@ public class Client {
                             inCall.set(false);
                             System.out.println("Target user is not online, resetting states...");
                             System.out.println("\nMenu:");
-                            System.out.println("1 - Make a Video Call");
-                            System.out.println("2 - Quit");
+                            System.out.println("1 - Make a Call");
+                            System.out.println("back - Go Back");
                             continue;
                         }
 
@@ -194,7 +194,7 @@ public class Client {
                         }
 
                         // Handle call accepted
-                        if (serverMessage.contains("Starting video call...")) {
+                        if (serverMessage.contains("Starting call...")) {
                             awaitingResponse.set(false);
                             inCall.set(true);
                         }
@@ -205,8 +205,8 @@ public class Client {
                             awaitingResponse.set(false);
                             System.out.println("The call has ended.");
                             System.out.println("\nMenu:");
-                            System.out.println("1 - Make a Video Call");
-                            System.out.println("2 - Quit");
+                            System.out.println("1 - Make a Call");
+                            System.out.println("back - Go Back");
                         }
 
                         // Handle call rejected
@@ -215,8 +215,15 @@ public class Client {
                             inCall.set(false);
                             System.out.println("\nCall rejected. Returning to menu.");
                             System.out.println("\nMenu:");
+                            System.out.println("1 - Make a Call");
+                            System.out.println("back - Go Back");
+                        }
+                        if (serverMessage.contains("You rejected the call from")) {
+                            awaitingResponse.set(false);
+                            inCall.set(false);
+                            System.out.println("\nMenu:");
                             System.out.println("1 - Make a Video Call");
-                            System.out.println("2 - Quit");
+                            System.out.println("back - Go Back");
                         }
                     }
                 } catch (IOException e) {
@@ -228,8 +235,8 @@ public class Client {
             while (running.get()) {
                 if (!awaitingResponse.get() && !inCall.get()) {
                     System.out.println("\nMenu:");
-                    System.out.println("1 - Make a Video Call");
-                    System.out.println("2 - Quit");
+                    System.out.println("1 - Make a Call");
+                    System.out.println("back - Go Back");
                 }
 
                 String input = scanner.nextLine();
@@ -239,14 +246,15 @@ public class Client {
                     if (input.equals("Y") || input.equals("N")) {
                         out.println(input);
                         awaitingResponse.set(false);
+                        inCall.set(true);
                     } else {
                         System.out.println("Invalid input. Press Y to accept or N to reject.");
                     }
                 } else if (inCall.get()) {
                     if (input.equals("0")) {
-                        out.println("0");
+                        out.println("0"); // Notify the server to end the call
                         System.out.println("You ended the call.");
-                        inCall.set(false);
+                        inCall.set(false); // Reset inCall state
                     } else {
                         System.out.println("Invalid input. Press 0 to end the call.");
                     }
@@ -255,9 +263,8 @@ public class Client {
                     String targetUser = scanner.nextLine();
                     out.println("CALL " + targetUser); // Notify the server about the call
                     awaitingResponse.set(true);
-                } else if (input.equals("2")) {
-                    System.out.println("Exiting...");
-                    out.println("exit"); // Notify the server
+                } else if (input.equals("back")) {
+                    System.out.println("Returning to main menu...");
                     running.set(false);
                     break;
                 } else {
