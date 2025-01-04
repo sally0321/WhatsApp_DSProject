@@ -1,7 +1,5 @@
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class DatabaseServer {
 
@@ -143,4 +141,133 @@ public class DatabaseServer {
         return userA.compareTo(userB) < 0 ? userA + "_" + userB + ".txt" : userB + "_" + userA + ".txt";
     }
 
+    // User Authentication Methods
+
+    // Registers a new user. Returns true if successful, false if phone number already exists.
+    public static boolean registerUser(String phoneNumber, String username) {
+        Map<String, String> users = getUserMap();
+        if (users.containsKey(phoneNumber)) {
+            return false; // Phone number already exists
+        }
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_FILE, true))) {
+            writer.write(phoneNumber + "," + username);
+            writer.newLine();
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // Verifies user credentials. Returns true if phone number and username match.
+    public static boolean verifyUser(String phoneNumber, String username) {
+        Map<String, String> users = getUserMap();
+        return username.equals(users.get(phoneNumber));
+    }
+
+    // Deletes a user account. Returns true if successful, false otherwise.
+    public static boolean deleteUser(String phoneNumber, String username) {
+        Map<String, String> users = getUserMap();
+        if (!username.equals(users.get(phoneNumber))) {
+            return false; // User not found
+        }
+
+        // Remove user from user_list.txt
+        List<String> updatedUsers = new ArrayList<>();
+        for (Map.Entry<String, String> entry : users.entrySet()) {
+            if (!entry.getKey().equals(phoneNumber)) {
+                updatedUsers.add(entry.getKey() + "," + entry.getValue());
+            }
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_FILE))) {
+            for (String user : updatedUsers) {
+                writer.write(user);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        // Optionally, delete user's chat history and contacts
+        // deleteUserData(username);
+
+        return true;
+    }
+
+    // Helper method to get a map of phoneNumber -> username
+    private static Map<String, String> getUserMap() {
+        Map<String, String> users = new HashMap<>();
+        File file = new File(USER_FILE);
+
+        // If the user file doesn't exist, create it
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return users;
+            }
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 2) {
+                    users.put(parts[0], parts[1]);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return users;
+    }
+
+    // Optionally, delete user's chat history and contacts
+    private static void deleteUserData(String username) {
+        // Delete chat history files
+        File chatDir = new File(CHAT_DIRECTORY);
+        File[] chatFiles = chatDir.listFiles((dir, name) -> name.contains(username));
+        if (chatFiles != null) {
+            for (File file : chatFiles) {
+                file.delete();
+            }
+        }
+
+        // Delete contact list
+        File contactFile = new File(CONTACT_DIRECTORY + username + ".txt");
+        if (contactFile.exists()) {
+            contactFile.delete();
+        }
+
+        // Additionally, remove this user from other users' contact lists
+        File contactsDir = new File(CONTACT_DIRECTORY);
+        File[] contactFiles = contactsDir.listFiles((dir, name) -> name.endsWith(".txt"));
+        if (contactFiles != null) {
+            for (File file : contactFiles) {
+                try {
+                    List<String> lines = new ArrayList<>();
+                    BufferedReader reader = new BufferedReader(new FileReader(file));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (!line.startsWith(username + ",")) {
+                            lines.add(line);
+                        }
+                    }
+                    reader.close();
+                    BufferedWriter writer = new BufferedWriter(new FileWriter(file));
+                    for (String l : lines) {
+                        writer.write(l);
+                        writer.newLine();
+                    }
+                    writer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
 }

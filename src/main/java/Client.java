@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Client {
     private static final String SERVER_ADDRESS = "localhost";
+    private static final int AUTH_SERVER_PORT = 1100; // New Authentication Server Port
     private static final int CHAT_SERVER_PORT = 1110;
     private static final int PROFILE_SERVER_PORT = 1111;
     private static final int VIDEO_CALL_SERVER_PORT = 1112;
@@ -12,10 +13,12 @@ public class Client {
     private static Scanner scanner = new Scanner(System.in);
     private static String input;
     private static String username;
+    private static String phoneNumber;
+    private static boolean isLoggedIn = false;
 
     public static void main(String[] args) {
-        promptUsername();
-        while (true) {
+        initialMenu();
+        while (isLoggedIn) {
             menu();
             if (input.equals("exit")) {
                 break;
@@ -29,28 +32,113 @@ public class Client {
                     profileSettings();
                     break;
                 }
-                case "3": // Video calling functionality
+                case "3": { // Video calling functionality
                     startVideoCall();
                     break;
+                }
+                case "4": { // Account Settings
+                    accountSettings();
+                    break;
+                }
                 default:
                     System.out.println("Invalid option.");
             }
+        }
+        System.out.println("Exiting application. Goodbye!");
+    }
+
+    private static void initialMenu() {
+        while (!isLoggedIn) {
+            System.out.println("\n=== Welcome to WhatsApp ===");
+            System.out.println("1 - Login");
+            System.out.println("2 - Register");
+            System.out.println("exit - Quit");
+            System.out.print("Choose an option: ");
+            input = scanner.nextLine();
+
+            switch (input) {
+                case "1":
+                    login();
+                    break;
+                case "2":
+                    register();
+                    break;
+                case "exit":
+                    System.exit(0);
+                default:
+                    System.out.println("Invalid option. Please try again.");
+            }
+        }
+    }
+
+    private static void login() {
+        try (Socket socket = new Socket(SERVER_ADDRESS, AUTH_SERVER_PORT);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            System.out.print("Enter phone number: ");
+            phoneNumber = scanner.nextLine();
+            System.out.print("Enter username: ");
+            username = scanner.nextLine();
+
+            // Send login request
+            out.println("LOGIN");
+            out.println(phoneNumber);
+            out.println(username);
+
+            // Receive response
+            String response = in.readLine();
+            if ("SUCCESS".equals(response)) {
+                System.out.println("Login successful!");
+                isLoggedIn = true;
+            } else {
+                System.out.println("Login failed: " + response);
+            }
+
+        } catch (IOException e) {
+            System.out.println("Unable to connect to Authentication Server. Please try again later.");
+        }
+    }
+
+    private static void register() {
+        try (Socket socket = new Socket(SERVER_ADDRESS, AUTH_SERVER_PORT);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            System.out.print("Enter phone number: ");
+            phoneNumber = scanner.nextLine();
+            System.out.print("Enter desired username: ");
+            username = scanner.nextLine();
+
+            // Send registration request
+            out.println("REGISTER");
+            out.println(phoneNumber);
+            out.println(username);
+
+            // Receive response
+            String response = in.readLine();
+            if ("SUCCESS".equals(response)) {
+                System.out.println("Registration successful! You are now logged in.");
+                isLoggedIn = true;
+            } else {
+                System.out.println("Registration failed: " + response);
+            }
+
+        } catch (IOException e) {
+            System.out.println("Unable to connect to Authentication Server. Please try again later.");
         }
     }
 
     private static void menu() {
         System.out.println();
-        System.out.println("Menu:");
+        System.out.println("=== Main Menu ===");
         System.out.println("1 - Messaging");
         System.out.println("2 - Profile Settings");
-        System.out.println("3 - VideoCall");
+        System.out.println("3 - Video Call");
+        System.out.println("4 - Account Settings");
         System.out.println("exit - Quit WhatsApp");
+        System.out.print("Choose an option: ");
         input = scanner.nextLine();
-    }
-
-    private static void promptUsername() {
-        System.out.println("Enter your username:");
-        username = scanner.nextLine();
     }
 
     private static void startChatting(){
@@ -73,7 +161,7 @@ public class Client {
                         System.out.println(serverResponse);
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.out.println("Connection to chat server lost.");
                 }
             }).start();
 
@@ -88,6 +176,7 @@ public class Client {
                     break;
                 }
             }
+            socket.close();
 
         } catch (IOException e) {
             System.out.println("Unable to connect to server. Please try again later.");
@@ -152,7 +241,7 @@ public class Client {
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Unable to connect to Profile Server.");
         }
     }
 
@@ -182,9 +271,7 @@ public class Client {
                             awaitingResponse.set(false);
                             inCall.set(false);
                             System.out.println("Target user is not online, resetting states...");
-                            System.out.println("\nMenu:");
-                            System.out.println("1 - Make a Call");
-                            System.out.println("back - Go Back");
+                            showVideoCallMenu();
                             continue;
                         }
 
@@ -204,9 +291,7 @@ public class Client {
                             inCall.set(false);
                             awaitingResponse.set(false);
                             System.out.println("The call has ended.");
-                            System.out.println("\nMenu:");
-                            System.out.println("1 - Make a Call");
-                            System.out.println("back - Go Back");
+                            showVideoCallMenu();
                         }
 
                         // Handle call rejected
@@ -214,39 +299,35 @@ public class Client {
                             awaitingResponse.set(false);
                             inCall.set(false);
                             System.out.println("\nCall rejected. Returning to menu.");
-                            System.out.println("\nMenu:");
-                            System.out.println("1 - Make a Call");
-                            System.out.println("back - Go Back");
+                            showVideoCallMenu();
                         }
                         if (serverMessage.contains("You rejected the call from")) {
                             awaitingResponse.set(false);
                             inCall.set(false);
-                            System.out.println("\nMenu:");
-                            System.out.println("1 - Make a Video Call");
-                            System.out.println("back - Go Back");
+                            showVideoCallMenu();
                         }
                     }
                 } catch (IOException e) {
-                    System.out.println(" ");
+                    System.out.println("Connection to call server lost.");
                 }
             }).start();
 
             // Handle user inputs
             while (running.get()) {
                 if (!awaitingResponse.get() && !inCall.get()) {
-                    System.out.println("\nMenu:");
-                    System.out.println("1 - Make a Call");
-                    System.out.println("back - Go Back");
+                    showVideoCallMenu();
                 }
 
                 String input = scanner.nextLine();
 
                 if (awaitingResponse.get()) {
                     // Accept or reject the call
-                    if (input.equals("Y") || input.equals("N")) {
-                        out.println(input);
+                    if (input.equalsIgnoreCase("Y") || input.equalsIgnoreCase("N")) {
+                        out.println(input.toUpperCase());
                         awaitingResponse.set(false);
-                        inCall.set(true);
+                        if (input.equalsIgnoreCase("Y")) {
+                            inCall.set(true);
+                        }
                     } else {
                         System.out.println("Invalid input. Press Y to accept or N to reject.");
                     }
@@ -258,21 +339,89 @@ public class Client {
                     } else {
                         System.out.println("Invalid input. Press 0 to end the call.");
                     }
-                } else if (input.equals("1")) {
-                    System.out.println("Enter the username to call:");
-                    String targetUser = scanner.nextLine();
-                    out.println("CALL " + targetUser); // Notify the server about the call
-                    awaitingResponse.set(true);
-                } else if (input.equals("back")) {
-                    System.out.println("Returning to main menu...");
-                    running.set(false);
-                    break;
                 } else {
-                    System.out.println("Invalid input. Please try again.");
+                    if (input.equals("1")) {
+                        System.out.print("Enter the username to call: ");
+                        String targetUser = scanner.nextLine();
+                        out.println("CALL " + targetUser); // Notify the server about the call
+                        awaitingResponse.set(true);
+                    } else if (input.equals("back")) {
+                        System.out.println("Returning to main menu...");
+                        running.set(false);
+                        break;
+                    } else {
+                        System.out.println("Invalid input. Please try again.");
+                    }
                 }
             }
+            socket.close();
         } catch (IOException e) {
             System.out.println("Exiting...");
+        }
+    }
+
+    private static void showVideoCallMenu() {
+        System.out.println("\n=== Video Call Menu ===");
+        System.out.println("1 - Make a Call");
+        System.out.println("back - Go Back");
+        System.out.print("Choose an option: ");
+    }
+
+    private static void accountSettings() {
+        while (true) {
+            System.out.println("\n-- Account Settings --");
+            System.out.println("1 - Logout");
+            System.out.println("2 - Delete Account");
+            System.out.println("back - Go Back");
+
+            String input = scanner.nextLine();
+            switch (input) {
+                case "1":
+                    logout();
+                    return;
+                case "2":
+                    deleteAccount();
+                    return;
+                case "back":
+                    return;
+                default:
+                    System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    private static void logout() {
+        isLoggedIn = false;
+        username = null;
+        phoneNumber = null;
+        System.out.println("You have been logged out.");
+        initialMenu();
+    }
+
+    private static void deleteAccount() {
+        try (Socket socket = new Socket(SERVER_ADDRESS, AUTH_SERVER_PORT);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            // Send delete account request
+            out.println("DELETE_ACCOUNT");
+            out.println(phoneNumber);
+            out.println(username);
+
+            // Receive response
+            String response = in.readLine();
+            if ("SUCCESS".equals(response)) {
+                System.out.println("Your account has been deleted.");
+                isLoggedIn = false;
+                username = null;
+                phoneNumber = null;
+                initialMenu();
+            } else {
+                System.out.println("Failed to delete account: " + response);
+            }
+
+        } catch (IOException e) {
+            System.out.println("Unable to connect to Authentication Server.");
         }
     }
 }
